@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Project Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --border: #e8e6e1;
+    --text: #1f1f1f; --text-muted: #787774; --accent: #2383e2;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+    --col-todo: #fef3c7; --col-todo-text: #92400e;
+    --col-progress: #dbeafe; --col-progress-text: #1e40af;
+    --col-review: #ede9fe; --col-review-text: #5b21b6;
+    --col-done: #d1fae5; --col-done-text: #065f46;
+    --pri-low: #d1fae5; --pri-low-text: #065f46;
+    --pri-med: #fef3c7; --pri-med-text: #92400e;
+    --pri-high: #fee2e2; --pri-high-text: #991b1b;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+  .setup-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: linear-gradient(135deg, #f7f6f3 0%, #e8e6e1 100%); }
+  .setup-card { background: white; border-radius: 16px; padding: 40px; max-width: 520px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+  .setup-card h2 { font-size: 22px; margin-bottom: 8px; }
+  .setup-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .setup-card label { display: block; font-size: 12px; font-weight: 500; margin: 16px 0 6px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+  .setup-card input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; }
+  .setup-card input:focus { outline: none; border-color: var(--accent); }
+  .setup-card button { width: 100%; margin-top: 20px; padding: 12px; border: none; background: var(--accent); color: white; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .setup-card button:hover { background: #1a6dc7; }
+  .setup-card .help-text { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .setup-error { background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 16px; display: none; }
+  .setup-error.show { display: block; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: grid; place-items: center; color: white; font-size: 20px; }
+  .brand h1 { font-size: 18px; font-weight: 600; }
+  .brand p { font-size: 12px; color: var(--text-muted); }
+  .header-stats { display: flex; gap: 24px; align-items: center; }
+  .stat { text-align: right; }
+  .stat-num { font-size: 20px; font-weight: 600; }
+  .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); padding: 6px 12px; background: var(--bg); border-radius: 6px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; }
+  .sync-dot.offline { background: #dc2626; animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; gap: 4px; overflow-x: auto; }
+  .tab { padding: 12px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-muted); border-bottom: 2px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 6px; transition: all 0.15s; font-family: inherit; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+  .tab-count { background: var(--bg); padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tab.active .tab-count { background: #e0efff; color: var(--accent); }
+  .toolbar { padding: 16px 32px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn { padding: 8px 14px; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text); display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; font-family: inherit; }
+  .btn:hover { background: var(--bg); border-color: #d4d2cd; }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover { background: #1a6dc7; border-color: #1a6dc7; }
+  .btn-danger { color: #dc2626; }
+  .btn-danger:hover { background: #fee2e2; border-color: #fecaca; }
+  .search { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 13px; width: 240px; font-family: inherit; }
+  .search:focus { outline: none; border-color: var(--accent); }
+  .spacer { flex: 1; }
+  .kanban { padding: 0 32px 32px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; min-height: 60vh; }
+  @media (max-width: 1100px) { .kanban { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .kanban { grid-template-columns: 1fr; padding: 0 16px 16px; } }
+  .column { background: var(--surface); border-radius: 10px; padding: 14px; min-height: 200px; display: flex; flex-direction: column; border: 1px solid var(--border); }
+  .column.drag-over { background: #f0f9ff; border-color: var(--accent); }
+  .column-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 4px 8px; border-radius: 6px; }
+  .column-title { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .column-count { background: rgba(0,0,0,0.08); padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .col-todo { background: var(--col-todo); color: var(--col-todo-text); }
+  .col-progress { background: var(--col-progress); color: var(--col-progress-text); }
+  .col-review { background: var(--col-review); color: var(--col-review-text); }
+  .col-done { background: var(--col-done); color: var(--col-done-text); }
+  .add-card-btn { padding: 8px; border: 1px dashed var(--border); background: transparent; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-size: 13px; margin-top: 8px; transition: all 0.15s; font-family: inherit; }
+  .add-card-btn:hover { background: var(--bg); color: var(--text); }
+  .cards { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: grab; transition: all 0.15s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+  .card.dragging { opacity: 0.4; cursor: grabbing; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+  .card-title { font-weight: 500; font-size: 13px; line-height: 1.4; flex: 1; }
+  .priority-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; }
+  .pri-low { background: var(--pri-low); color: var(--pri-low-text); }
+  .pri-medium { background: var(--pri-med); color: var(--pri-med-text); }
+  .pri-high { background: var(--pri-high); color: var(--pri-high-text); }
+  .card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+  .card-owner { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); padding: 2px 8px; border-radius: 10px; }
+  .owner-dot { width: 16px; height: 16px; border-radius: 50%; color: white; font-size: 9px; font-weight: 600; display: inline-grid; place-items: center; }
+  .card-deadline { display: inline-flex; align-items: center; gap: 4px; }
+  .deadline-overdue { color: #dc2626; font-weight: 500; }
+  .deadline-soon { color: #d97706; font-weight: 500; }
+  .progress-bar { margin-top: 8px; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #2383e2); transition: width 0.3s; border-radius: 2px; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--surface); border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 0; width: 28px; height: 28px; border-radius: 6px; }
+  .close-btn:hover { background: var(--bg); color: var(--text); }
+  .modal-body { padding: 20px 24px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--surface); font-family: inherit; color: var(--text); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .progress-slider-wrap { display: flex; align-items: center; gap: 12px; }
+  .progress-slider-wrap input[type="range"] { flex: 1; }
+  .progress-value { min-width: 40px; font-weight: 600; color: var(--accent); }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: space-between; }
+  .overview-tab { padding: 24px 32px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .stat-card-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-card-num { font-size: 28px; font-weight: 700; }
+  .stat-card-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .owner-summary { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+  .owner-summary h3 { font-size: 14px; margin-bottom: 16px; }
+  .owner-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .owner-row:last-child { border: none; }
+  .owner-row-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .owner-row-bar { flex: 2; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .owner-row-fill { height: 100%; background: linear-gradient(90deg, #667eea, #2383e2); border-radius: 4px; }
+  .owner-row-text { font-size: 12px; color: var(--text-muted); min-width: 80px; text-align: right; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow-lg); transform: translateY(100px); opacity: 0; transition: all 0.25s; z-index: 200; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; gap: 16px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="boot-loading">
+  <div class="spinner"></div>
+  <div style="color: var(--text-muted); font-size: 13px;" id="boot-status">Loading dashboard...</div>
+</div>
+
+<div class="setup-screen" id="setup-screen" style="display:none;">
+  <div class="setup-card">
+    <h2>Connect to Supabase</h2>
+    <p>One-time setup. After this, the dashboard works automatically for the whole team.</p>
+    <label>Supabase URL</label>
+    <input type="text" id="setup-url" placeholder="https://xxxxx.supabase.co" />
+    <div class="help-text">Find in your Supabase project: Settings &rarr; API</div>
+    <label>Supabase Anon Key</label>
+    <input type="text" id="setup-key" placeholder="eyJhbGciOiJI..." />
+    <div class="help-text">The "anon public" key from the same page</div>
+    <button onclick="completeSetup()">Connect Dashboard</button>
+    <div class="setup-error" id="setup-error"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <div class="brand">
+      <div class="brand-icon">P</div>
+      <div>
+        <h1>Project Dashboard</h1>
+        <p>Track progress across all your projects</p>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat"><div class="stat-num" id="total-projects">0</div><div class="stat-label">Total</div></div>
+      <div class="stat"><div class="stat-num" id="active-projects">0</div><div class="stat-label">Active</div></div>
+      <div class="stat"><div class="stat-num" id="completed-projects">0</div><div class="stat-label">Done</div></div>
+      <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Live</span></div>
+    </div>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openNewProjectModal()"><span style="font-size: 16px; line-height: 1;">+</span> New Project</button>
+    <input type="text" class="search" id="search" placeholder="Search projects..." />
+    <div class="spacer"></div>
+    <button class="btn" onclick="manageOwners()">Manage Team</button>
+  </div>
+  <div id="main-content"></div>
+</div>
+
+<div class="modal-bg" id="project-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">New Project</div>
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Project Title</label><input type="text" id="f-title" placeholder="e.g. Website Redesign" /></div>
+      <div class="field"><label>Description / Notes</label><textarea id="f-notes" placeholder="What needs to happen here?"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Owner</label><select id="f-owner"></select></div>
+        <div class="field"><label>Status</label><select id="f-status">
+          <option value="todo">To Do</option><option value="progress">In Progress</option><option value="review">Review</option><option value="done">Done</option>
+        </select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Deadline</label><input type="date" id="f-deadline" /></div>
+        <div class="field"><label>Priority</label><select id="f-priority">
+          <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option>
+        </select></div>
+      </div>
+      <div class="field">
+        <label>Progress: <span class="progress-value" id="progress-display">0%</span></label>
+        <div class="progress-slider-wrap"><input type="range" id="f-progress" min="0" max="100" value="0" oninput="document.getElementById('progress-display').textContent = this.value + '%'" /></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="delete-btn" onclick="deleteProject()" style="display:none;">Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="owners-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Team Members</div>
+      <button class="close-btn" onclick="closeOwnersModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Add Team Member</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="new-owner-name" placeholder="Name (e.g. Sarah)" style="flex:1;" />
+          <button class="btn btn-primary" onclick="addOwner()">Add</button>
+        </div>
+      </div>
+      <div id="owners-list"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeOwnersModal()" style="margin-left:auto;">Done</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Load Supabase library dynamically with retries and fallbacks
+function loadSupabase() {
+  return new Promise((resolve, reject) => {
+    if (window.supabase) { resolve(); return; }
+    const cdns = [
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+      'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+      'https://cdn.skypack.dev/@supabase/supabase-js@2'
+    ];
+    let attempt = 0;
+    function tryLoad() {
+      if (attempt >= cdns.length) { reject(new Error('All CDNs failed')); return; }
+      const status = document.getElementById('boot-status');
+      if (status) status.textContent = 'Loading library (attempt ' + (attempt + 1) + ')...';
+      const script = document.createElement('script');
+      script.src = cdns[attempt];
+      script.onload = () => {
+        if (window.supabase) resolve();
+        else { attempt++; tryLoad(); }
+      };
+      script.onerror = () => { attempt++; tryLoad(); };
+      document.head.appendChild(script);
+    }
+    tryLoad();
+  });
+}
+
+const HARDCODED_URL = '';
+const HARDCODED_KEY = '';
+
+let supabaseClient = null;
+let realtimeChannel = null;
+let state = { projects: [], owners: [], activeTab: 'overview', searchQuery: '', editingId: null };
+const COLORS = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#feca57','#ee5a6f','#48dbfb','#a29bfe','#fd79a8'];
+
+function getStoredCredentials() {
+  if (HARDCODED_URL && HARDCODED_KEY) return { url: HARDCODED_URL, key: HARDCODED_KEY };
+  const url = localStorage.getItem('sb_url');
+  const key = localStorage.getItem('sb_key');
+  if (url && key) return { url, key };
+  return null;
+}
+
+async function completeSetup() {
+  const url = document.getElementById('setup-url').value.trim();
+  const key = document.getElementById('setup-key').value.trim();
+  const errEl = document.getElementById('setup-error');
+  if (!url || !key) { errEl.textContent = 'Both fields are required.'; errEl.classList.add('show'); return; }
+  try {
+    const testClient = window.supabase.createClient(url, key);
+    const { error } = await testClient.from('projects').select('id').limit(1);
+    if (error) {
+      if (error.message && (error.message.includes('does not exist') || error.code === '42P01')) {
+        errEl.innerHTML = 'Connected, but database tables don\'t exist yet. Run the SQL setup script first.';
+        errEl.classList.add('show'); return;
+      }
+      throw error;
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection failed: ' + (e.message || 'Check your URL and key');
+    errEl.classList.add('show'); return;
+  }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  document.getElementById('setup-screen').style.display = 'none';
+  init();
+}
+
+async function loadData() {
+  try {
+    const { data: projects, error: pErr } = await supabaseClient.from('projects').select('*').order('created_at', { ascending: true });
+    if (pErr) throw pErr;
+    state.projects = projects || [];
+    const { data: owners, error: oErr } = await supabaseClient.from('owners').select('*').order('created_at', { ascending: true });
+    if (oErr) throw oErr;
+    state.owners = owners || [];
+    if (state.owners.length === 0) {
+      await supabaseClient.from('owners').insert({ name: 'Unassigned', color: '#9ca3af' });
+      const { data: refreshed } = await supabaseClient.from('owners').select('*');
+      state.owners = refreshed || [];
+    }
+    setSyncStatus(true);
+  } catch (e) {
+    console.error('Load failed:', e);
+    setSyncStatus(false);
+    showToast('Connection error: ' + (e.message || 'unknown'));
+  }
+}
+
+function setSyncStatus(online) {
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if (!dot || !label) return;
+  if (online) { dot.classList.remove('offline'); label.textContent = 'Live'; }
+  else { dot.classList.add('offline'); label.textContent = 'Offline'; }
+}
+
+function startRealtimeSync() {
+  try {
+    if (realtimeChannel) realtimeChannel.unsubscribe();
+    realtimeChannel = supabaseClient.channel('dashboard-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, async () => { await loadData(); render(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'owners' }, async () => { await loadData(); render(); })
+      .subscribe();
+  } catch (e) { console.warn('Realtime not available:', e); }
+}
+
+function ownerByName(name) { return state.owners.find(o => o.name === name) || state.owners.find(o => o.name === 'Unassigned') || state.owners[0]; }
+function ownerInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+function getDeadlineState(deadline, status) {
+  if (!deadline || status === 'done') return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(deadline); d.setHours(0,0,0,0);
+  const diffDays = Math.round((d - today) / (1000*60*60*24));
+  if (diffDays < 0) return { label: 'Overdue ' + Math.abs(diffDays) + 'd', class: 'deadline-overdue' };
+  if (diffDays === 0) return { label: 'Due today', class: 'deadline-overdue' };
+  if (diffDays <= 3) return { label: 'Due in ' + diffDays + 'd', class: 'deadline-soon' };
+  return { label: 'Due ' + formatDate(deadline), class: '' };
+}
+function formatDate(iso) { if (!iso) return ''; return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function render() { renderHeaderStats(); renderTabs(); renderMain(); }
+function renderHeaderStats() {
+  const total = state.projects.length;
+  const done = state.projects.filter(p => p.status === 'done').length;
+  document.getElementById('total-projects').textContent = total;
+  document.getElementById('active-projects').textContent = total - done;
+  document.getElementById('completed-projects').textContent = done;
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  let html = '';
+  html += '<button class="tab ' + (state.activeTab === 'overview' ? 'active' : '') + '" onclick="setTab(\'overview\')"><span>Overview</span></button>';
+  html += '<button class="tab ' + (state.activeTab === 'all' ? 'active' : '') + '" onclick="setTab(\'all\')"><span>All Projects</span><span class="tab-count">' + state.projects.length + '</span></button>';
+  state.owners.filter(o => o.name !== 'Unassigned').forEach(owner => {
+    const count = state.projects.filter(p => p.owner === owner.name).length;
+    html += '<button class="tab ' + (state.activeTab === owner.name ? 'active' : '') + '" onclick="setTab(\'' + escapeHtml(owner.name) + '\')">';
+    html += '<span class="owner-dot" style="background:' + owner.color + '">' + ownerInitials(owner.name) + '</span>';
+    html += '<span>' + escapeHtml(owner.name) + '</span>';
+    html += '<span class="tab-count">' + count + '</span></button>';
+  });
+  tabs.innerHTML = html;
+}
+
+function renderMain() {
+  const main = document.getElementById('main-content');
+  if (state.activeTab === 'overview') { main.innerHTML = renderOverview(); }
+  else { main.innerHTML = renderKanban(); attachDragHandlers(); }
+}
+
+function renderOverview() {
+  const projects = state.projects;
+  const total = projects.length;
+  const done = projects.filter(p => p.status === 'done').length;
+  const inProg = projects.filter(p => p.status === 'progress').length;
+  const overdue = projects.filter(p => { if (!p.deadline || p.status === 'done') return false; return new Date(p.deadline) < new Date(new Date().toDateString()); }).length;
+  const avgProgress = total ? Math.round(projects.reduce((s,p) => s + (p.progress || 0), 0) / total) : 0;
+
+  let ownerStats = '';
+  state.owners.filter(o => o.name !== 'Unassigned').forEach(owner => {
+    const op = projects.filter(p => p.owner === owner.name);
+    if (op.length === 0) return;
+    const od = op.filter(p => p.status === 'done').length;
+    const pct = Math.round((od / op.length) * 100);
+    ownerStats += '<div class="owner-row">';
+    ownerStats += '<span class="owner-dot" style="background:' + owner.color + ';width:24px;height:24px;font-size:11px;">' + ownerInitials(owner.name) + '</span>';
+    ownerStats += '<div class="owner-row-name">' + escapeHtml(owner.name) + '</div>';
+    ownerStats += '<div class="owner-row-bar"><div class="owner-row-fill" style="width:' + pct + '%"></div></div>';
+    ownerStats += '<div class="owner-row-text">' + od + '/' + op.length + ' done</div></div>';
+  });
+  if (!ownerStats) ownerStats = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">No team members with projects yet.</div>';
+
+  const upcoming = projects.filter(p => p.deadline && p.status !== 'done').sort((a,b) => new Date(a.deadline) - new Date(b.deadline)).slice(0, 5);
+  let upcomingHtml = upcoming.length === 0 ? '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">No upcoming deadlines</div>' : '';
+  upcoming.forEach(p => {
+    const owner = ownerByName(p.owner);
+    const dl = getDeadlineState(p.deadline, p.status);
+    upcomingHtml += '<div class="owner-row" style="cursor:pointer;" onclick="editProject(\'' + p.id + '\')">';
+    upcomingHtml += '<span class="owner-dot" style="background:' + owner.color + ';width:24px;height:24px;font-size:11px;">' + ownerInitials(p.owner) + '</span>';
+    upcomingHtml += '<div class="owner-row-name">' + escapeHtml(p.title) + '</div>';
+    upcomingHtml += '<div class="owner-row-text ' + (dl ? dl.class : '') + '">' + (dl ? dl.label : formatDate(p.deadline)) + '</div></div>';
+  });
+
+  let html = '<div class="overview-tab"><div class="stats-grid">';
+  html += '<div class="stat-card"><div class="stat-card-label">Total Projects</div><div class="stat-card-num">' + total + '</div><div class="stat-card-sub">across ' + Math.max(0, state.owners.length - 1) + ' team members</div></div>';
+  html += '<div class="stat-card"><div class="stat-card-label">In Progress</div><div class="stat-card-num" style="color:#1e40af;">' + inProg + '</div><div class="stat-card-sub">actively being worked on</div></div>';
+  html += '<div class="stat-card"><div class="stat-card-label">Completed</div><div class="stat-card-num" style="color:#065f46;">' + done + '</div><div class="stat-card-sub">' + (total ? Math.round(done/total*100) : 0) + '% completion rate</div></div>';
+  html += '<div class="stat-card"><div class="stat-card-label">Overdue</div><div class="stat-card-num" style="color:#dc2626;">' + overdue + '</div><div class="stat-card-sub">need attention</div></div>';
+  html += '<div class="stat-card"><div class="stat-card-label">Avg Progress</div><div class="stat-card-num" style="color:var(--accent);">' + avgProgress + '%</div><div class="stat-card-sub">across all projects</div></div>';
+  html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+  html += '<div class="owner-summary"><h3>Team Progress</h3>' + ownerStats + '</div>';
+  html += '<div class="owner-summary"><h3>Upcoming Deadlines</h3>' + upcomingHtml + '</div>';
+  html += '</div></div>';
+  html += '<style>@media (max-width: 800px) { .overview-tab > div:last-child { grid-template-columns: 1fr !important; } }</style>';
+  return html;
+}
+
+function renderKanban() {
+  let filtered = state.projects;
+  if (state.activeTab !== 'all') filtered = filtered.filter(p => p.owner === state.activeTab);
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    filtered = filtered.filter(p => (p.title || '').toLowerCase().includes(q) || (p.notes || '').toLowerCase().includes(q));
+  }
+  const cols = [
+    { id: 'todo', label: 'To Do', cls: 'col-todo' },
+    { id: 'progress', label: 'In Progress', cls: 'col-progress' },
+    { id: 'review', label: 'Review', cls: 'col-review' },
+    { id: 'done', label: 'Done', cls: 'col-done' }
+  ];
+  let html = '<div class="kanban">';
+  cols.forEach(col => {
+    const items = filtered.filter(p => p.status === col.id);
+    html += '<div class="column" data-status="' + col.id + '">';
+    html += '<div class="column-header ' + col.cls + '"><div class="column-title">' + col.label + '</div><div class="column-count">' + items.length + '</div></div>';
+    html += '<div class="cards" data-status="' + col.id + '">' + items.map(p => renderCard(p)).join('') + '</div>';
+    html += '<button class="add-card-btn" onclick="openNewProjectModal(\'' + col.id + '\')">+ Add project</button></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderCard(p) {
+  const owner = ownerByName(p.owner);
+  const dl = getDeadlineState(p.deadline, p.status);
+  const progress = p.progress || 0;
+  let html = '<div class="card" draggable="true" data-id="' + p.id + '" onclick="editProject(\'' + p.id + '\')">';
+  html += '<div class="card-header"><div class="card-title">' + escapeHtml(p.title) + '</div><span class="priority-badge pri-' + p.priority + '">' + p.priority + '</span></div>';
+  if (p.notes) html += '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHtml(p.notes) + '</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" style="width:' + progress + '%"></div></div>';
+  html += '<div class="card-meta">';
+  html += '<span class="card-owner"><span class="owner-dot" style="background:' + owner.color + '">' + ownerInitials(p.owner) + '</span>' + escapeHtml(p.owner) + '</span>';
+  if (dl) html += '<span class="card-deadline ' + dl.class + '">📅 ' + dl.label + '</span>';
+  else if (p.deadline) html += '<span class="card-deadline">📅 ' + formatDate(p.deadline) + '</span>';
+  html += '<span style="margin-left:auto;font-weight:500;color:var(--accent);">' + progress + '%</span>';
+  html += '</div></div>';
+  return html;
+}
+
+function setTab(tab) { state.activeTab = tab; render(); }
+
+function openNewProjectModal(presetStatus) {
+  state.editingId = null;
+  document.getElementById('modal-title').textContent = 'New Project';
+  document.getElementById('delete-btn').style.display = 'none';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-notes').value = '';
+  populateOwnerSelect();
+  document.getElementById('f-status').value = presetStatus || 'todo';
+  document.getElementById('f-deadline').value = '';
+  document.getElementById('f-priority').value = 'medium';
+  document.getElementById('f-progress').value = 0;
+  document.getElementById('progress-display').textContent = '0%';
+  document.getElementById('project-modal').classList.add('show');
+  setTimeout(() => document.getElementById('f-title').focus(), 100);
+}
+
+function editProject(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  state.editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Project';
+  document.getElementById('delete-btn').style.display = 'inline-flex';
+  document.getElementById('f-title').value = p.title || '';
+  document.getElementById('f-notes').value = p.notes || '';
+  populateOwnerSelect();
+  document.getElementById('f-owner').value = p.owner || 'Unassigned';
+  document.getElementById('f-status').value = p.status || 'todo';
+  document.getElementById('f-deadline').value = p.deadline || '';
+  document.getElementById('f-priority').value = p.priority || 'medium';
+  document.getElementById('f-progress').value = p.progress || 0;
+  document.getElementById('progress-display').textContent = (p.progress || 0) + '%';
+  document.getElementById('project-modal').classList.add('show');
+}
+
+function populateOwnerSelect() {
+  const sel = document.getElementById('f-owner');
+  sel.innerHTML = state.owners.map(o => '<option value="' + escapeHtml(o.name) + '">' + escapeHtml(o.name) + '</option>').join('');
+}
+
+function closeModal() { document.getElementById('project-modal').classList.remove('show'); }
+
+async function saveProject() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { showToast('Title required'); return; }
+  const data = {
+    title, notes: document.getElementById('f-notes').value.trim(),
+    owner: document.getElementById('f-owner').value || 'Unassigned',
+    status: document.getElementById('f-status').value,
+    deadline: document.getElementById('f-deadline').value || null,
+    priority: document.getElementById('f-priority').value,
+    progress: parseInt(document.getElementById('f-progress').value) || 0
+  };
+  if (data.status === 'done' && data.progress < 100) data.progress = 100;
+  if (data.status === 'todo' && !state.editingId) data.progress = 0;
+  try {
+    if (state.editingId) {
+      const { error } = await supabaseClient.from('projects').update(data).eq('id', state.editingId);
+      if (error) throw error;
+      showToast('Project updated');
+    } else {
+      const { error } = await supabaseClient.from('projects').insert(data);
+      if (error) throw error;
+      showToast('Project created');
+    }
+    await loadData(); closeModal(); render();
+  } catch (e) { showToast('Save failed: ' + e.message); console.error(e); }
+}
+
+async function deleteProject() {
+  if (!state.editingId) return;
+  if (!confirm('Delete this project?')) return;
+  try {
+    const { error } = await supabaseClient.from('projects').delete().eq('id', state.editingId);
+    if (error) throw error;
+    await loadData(); closeModal(); render();
+    showToast('Project deleted');
+  } catch (e) { showToast('Delete failed: ' + e.message); console.error(e); }
+}
+
+function manageOwners() { renderOwnersList(); document.getElementById('owners-modal').classList.add('show'); }
+function closeOwnersModal() { document.getElementById('owners-modal').classList.remove('show'); }
+
+function renderOwnersList() {
+  const list = document.getElementById('owners-list');
+  let html = '<label style="display:block;font-size:12px;font-weight:500;margin:16px 0 6px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Current Team</label>';
+  const realOwners = state.owners.filter(o => o.name !== 'Unassigned');
+  if (realOwners.length === 0) {
+    html += '<div style="color:var(--text-muted);font-size:13px;padding:16px;text-align:center;">No team members yet. Add one above.</div>';
+  } else {
+    realOwners.forEach(o => {
+      const projectCount = state.projects.filter(p => p.owner === o.name).length;
+      html += '<div class="owner-row" style="padding:8px 0;">';
+      html += '<span class="owner-dot" style="background:' + o.color + ';width:28px;height:28px;font-size:12px;">' + ownerInitials(o.name) + '</span>';
+      html += '<div class="owner-row-name">' + escapeHtml(o.name) + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);">' + projectCount + ' project' + (projectCount === 1 ? '' : 's') + '</div>';
+      html += '<button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="removeOwner(\'' + o.id + '\')">Remove</button></div>';
+    });
+  }
+  list.innerHTML = html;
+}
+
+async function addOwner() {
+  const name = document.getElementById('new-owner-name').value.trim();
+  if (!name) return;
+  if (state.owners.find(o => o.name.toLowerCase() === name.toLowerCase())) { showToast('Already exists'); return; }
+  const color = COLORS[state.owners.length % COLORS.length];
+  try {
+    const { error } = await supabaseClient.from('owners').insert({ name, color });
+    if (error) throw error;
+    document.getElementById('new-owner-name').value = '';
+    await loadData(); renderOwnersList(); renderTabs();
+    showToast('Added ' + name);
+  } catch (e) { showToast('Failed: ' + e.message); console.error(e); }
+}
+
+async function removeOwner(id) {
+  const owner = state.owners.find(o => o.id === id);
+  if (!owner) return;
+  const projectCount = state.projects.filter(p => p.owner === owner.name).length;
+  let msg = 'Remove ' + owner.name + ' from the team?';
+  if (projectCount > 0) msg += '\n\nTheir ' + projectCount + ' project' + (projectCount === 1 ? '' : 's') + ' will be reassigned to "Unassigned".';
+  if (!confirm(msg)) return;
+  try {
+    if (projectCount > 0) await supabaseClient.from('projects').update({ owner: 'Unassigned' }).eq('owner', owner.name);
+    const { error } = await supabaseClient.from('owners').delete().eq('id', id);
+    if (error) throw error;
+    await loadData(); renderOwnersList(); render();
+    showToast('Removed ' + owner.name);
+  } catch (e) { showToast('Failed: ' + e.message); console.error(e); }
+}
+
+function attachDragHandlers() {
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', card.dataset.id); });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
+  document.querySelectorAll('.column').forEach(col => {
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+    col.addEventListener('drop', async e => {
+      e.preventDefault(); col.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      const newStatus = col.dataset.status;
+      const proj = state.projects.find(p => p.id === id);
+      if (proj && proj.status !== newStatus) {
+        const update = { status: newStatus };
+        if (newStatus === 'done') update.progress = 100;
+        try {
+          await supabaseClient.from('projects').update(update).eq('id', id);
+          await loadData(); render(); showToast('Project moved');
+        } catch (err) { showToast('Failed: ' + err.message); }
+      }
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('search').addEventListener('input', e => {
+    state.searchQuery = e.target.value;
+    if (state.activeTab === 'overview') { state.activeTab = 'all'; renderTabs(); }
+    renderMain();
+  });
+  document.getElementById('project-modal').addEventListener('click', e => { if (e.target.id === 'project-modal') closeModal(); });
+  document.getElementById('owners-modal').addEventListener('click', e => { if (e.target.id === 'owners-modal') closeOwnersModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeOwnersModal(); } });
+});
+
+async function init() {
+  document.getElementById('boot-loading').style.display = 'flex';
+  document.getElementById('boot-status').textContent = 'Loading library...';
+
+  try {
+    await loadSupabase();
+  } catch (e) {
+    document.getElementById('boot-status').textContent = 'Failed to load Supabase library. Check your internet connection and refresh.';
+    return;
+  }
+
+  const creds = getStoredCredentials();
+  if (!creds) {
+    document.getElementById('boot-loading').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+    return;
+  }
+
+  try {
+    supabaseClient = window.supabase.createClient(creds.url, creds.key);
+    await loadData();
+    startRealtimeSync();
+    document.getElementById('boot-loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    render();
+  } catch (e) {
+    document.getElementById('boot-status').textContent = 'Connection failed: ' + e.message;
+  }
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
